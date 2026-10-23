@@ -5,6 +5,7 @@
 ### Added
 
 - Added `display.userMessagePadding` (default `true`): set it to `false` to drop the blank rows above and below your messages in the transcript; a reaction then sits at the right end of the message's first row when it fits, otherwise on its own row above the text
+- Added `display.toolActivitySummary` (default `false`): while tool activity is hidden, each run of tool calls shows as one line, such as `● Read 4 files, edited 2 files +6 −2, ran 2 commands, 1 failed · 6.1s`, with the current step and a spinner while a call runs
 
 ## [18.12.6] - 2026-10-21
 

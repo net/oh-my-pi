@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import type { AssistantMessage, Usage } from "@oh-my-pi/pi-ai";
 import { type Component } from "../tui";
 import { Container } from "../tui";
+import type { ToolRunCall } from "../chrome/tool-run-summary";
 import { Text } from "../components/text";
 import { getLanguageFromPath, theme } from "../theme";
 import { parseLineRanges, selectorLineRanges } from "../tools/line-ranges";
@@ -434,6 +435,16 @@ export class ReadToolGroupComponent extends Container implements ToolExecutionHa
 
 	getTranscriptBlockVersion(): number {
 		return this.#blockVersion;
+	}
+
+	/** Each grouped read as a tool-run summary counts it. */
+	toolRunCalls(): readonly ToolRunCall[] {
+		return Array.from(this.#entries.values(), (entry): ToolRunCall => {
+			let state: ToolRunCall["state"] = "done";
+			if (entry.status === "error") state = "failed";
+			else if (entry.status === "pending" && !this.#sealed) state = "running";
+			return { tool: "read", args: { path: entry.path }, state };
+		});
 	}
 
 	updateArgs(args: ReadRenderArgs, toolCallId?: string): void {

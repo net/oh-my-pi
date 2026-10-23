@@ -7,6 +7,7 @@ import type { NativeNode } from "../native/node";
 import { isNativeSettled, settleNative } from "../native/settle";
 import { isUsageRowBlock } from "../overlays/usage-row";
 import { isToolActivityComponent } from "./tool-activity";
+import { isToolRunSource, rendersContent, ToolRunSummaryComponent } from "./tool-run-summary";
 import { directPlacementLift, ImageProtocol, iterm2ImagePayload, TERMINAL } from "../terminal-capabilities";
 
 /** Shared animation time supplied by the constrained transcript root. */
@@ -260,6 +261,10 @@ export class TranscriptContainer extends Container {
 	#replayPending = false;
 	#replayRequested = false;
 	#toolActivityVisible = true;
+	/** Open a {@link ToolRunSummaryComponent} ahead of each run of tool calls. */
+	#toolRunSummaries = false;
+	/** Width of the last render, for measuring blocks outside one. */
+	#lastWidth = 80;
 	#lastFrame: AnimationFrame = { tick: 0, now: 0 };
 	// Start rows from the last full render(), keyed by child component (transcript deep-links).
 	#childStartRows = new Map<Component, number>();
@@ -293,6 +298,29 @@ export class TranscriptContainer extends Container {
 	#nativeBlocks: readonly Component[] = [];
 	#nativeNode: NativeNode | undefined;
 	override addChild(component: Component): void {
+		if (this.#toolRunSummaries && isToolRunSource(component) && this.#startsToolRun()) {
+			this.#append(new ToolRunSummaryComponent(this));
+		}
+		this.#append(component);
+	}
+
+	/**
+	 * Whether a tool call added now starts a new run: no earlier summary is
+	 * reachable without crossing a block that draws something. Tool activity
+	 * and blank blocks (an assistant message that only called tools) continue
+	 * the run.
+	 */
+	#startsToolRun(): boolean {
+		for (let index = this.children.length - 1; index >= 0; index--) {
+			const child = this.children[index]!;
+			if (child instanceof ToolRunSummaryComponent) return false;
+			if (isToolActivityComponent(child)) continue;
+			if (rendersContent(child, this.#lastWidth)) return true;
+		}
+		return true;
+	}
+
+	#append(component: Component): void {
 		if (isToolActivityComponent(component)) component.setToolActivityVisible(this.#toolActivityVisible);
 		super.addChild(component);
 		this.#entries.push({
@@ -317,7 +345,7 @@ export class TranscriptContainer extends Container {
 	 * pays a full O(n) rebuild.
 	 */
 	insertChildAt(component: Component, index: number): void {
-		this.addChild(component);
+		this.#append(component);
 		const from = this.children.length - 1;
 		if (index >= from) {
 			this.#entriesUnverified = false;
@@ -363,6 +391,15 @@ export class TranscriptContainer extends Container {
 			if (isToolActivityComponent(child)) child.setToolActivityVisible(visible);
 		}
 		this.invalidate();
+	}
+
+	/**
+	 * Whether tool calls added from now on get a one-line run summary, shown
+	 * while tool activity is hidden. Existing blocks keep their shape; callers
+	 * rebuild the transcript after a change.
+	 */
+	setToolRunSummaries(enabled: boolean): void {
+		this.#toolRunSummaries = enabled;
 	}
 
 	/**
@@ -583,6 +620,7 @@ export class TranscriptContainer extends Container {
 	renderViewport(width: number, rows: number, frame: AnimationFrame): readonly string[] {
 		if (frame !== this.#openFrame) this.#closeFrame();
 		this.#lastFrame = frame;
+		this.#lastWidth = width;
 		try {
 			return this.#composeViewport(width, rows, frame);
 		} finally {
@@ -1010,6 +1048,7 @@ export class TranscriptContainer extends Container {
 
 	/** Full semantic render used by exports and non-terminal commands. */
 	override render(width: number): readonly string[] {
+		this.#lastWidth = width;
 		this.#syncEntries();
 		this.#childStartRows.clear();
 		const rows: string[] = [];

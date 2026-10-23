@@ -53,6 +53,7 @@ import { FenceFigure } from "./fence-figure";
 import { sanitizeWithOptionalSixelPassthrough } from "../render/sixel";
 import { renderDiff } from "../chrome/diff";
 import { type AnimationFrame, trimBlankEdges } from "../chrome/transcript-container";
+import type { ToolRunCall } from "../chrome/tool-run-summary";
 
 /** Resolves the canonical renderer key while retaining the provider's wire name in message history. */
 export function toolRenderName(wireName: string, tool: AgentTool | undefined): string {
@@ -892,6 +893,24 @@ export class ToolExecutionComponent extends Container {
 	getTranscriptBlockVersion(): number {
 		return this.#blockVersion;
 	}
+
+	/** This call as a tool-run summary counts it. */
+	toolRunCalls(): readonly ToolRunCall[] {
+		const settled = this.#sealed || this.#parkedBackground || (this.#result !== undefined && !this.#isPartial);
+		let state: ToolRunCall["state"] = "running";
+		if (settled) state = this.#result?.isError === true ? "failed" : "done";
+		return [
+			{
+				tool: this.#toolName,
+				args: this.#args,
+				details: this.#result?.details,
+				state,
+				startedAt: this.#executionStartedAtNow,
+				endedAt: this.#executionEndedAtNow,
+			},
+		];
+	}
+
 	/** Mark the call parked: it returned, but stays tracked for async job frames. */
 	parkAsBackground(): void {
 		this.#parkedBackground = true;

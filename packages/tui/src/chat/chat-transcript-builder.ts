@@ -114,6 +114,7 @@ export class ChatTranscriptBuilder {
 	constructor(deps: ChatTranscriptBuilderDeps) {
 		this.#deps = deps;
 		this.container.setToolActivityVisible(!displayPreferences.hideToolActivity);
+		this.container.setToolRunSummaries(displayPreferences.toolActivitySummary);
 	}
 
 	/** Whether the transcript currently holds any rendered rows. */

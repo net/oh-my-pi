@@ -670,6 +670,18 @@ export const cfgDisplayHideToolActivity = register({
 	},
 });
 
+export const cfgDisplayToolActivitySummary = register({
+	id: "display.toolActivitySummary",
+	type: "boolean",
+	default: false,
+	ui: {
+		tab: "appearance",
+		group: "Display",
+		label: "Tool Activity Summary",
+		description: "While tool activity is hidden, show one line summarizing each run of tool calls",
+	},
+});
+
 export const cfgDisplayUserMessagePadding = register({
 	id: "display.userMessagePadding",
 	type: "boolean",
@@ -720,6 +732,7 @@ export const cfgDisplayCacheMissMarker = register({
 effect(
 	combine({
 		hideToolActivity: cfgDisplayHideToolActivity,
+		toolActivitySummary: cfgDisplayToolActivitySummary,
 		readToolResultPreview: cfgReadToolResultPreview,
 		userMessagePadding: cfgDisplayUserMessagePadding,
 		showImages: cfgTerminalShowImages,

@@ -365,6 +365,7 @@ import {
 	cfgDisplayShowTokenUsage,
 	cfgDisplayShowTurnTime,
 	cfgDisplaySubagentLivePreview,
+	cfgDisplayToolActivitySummary,
 	cfgDisplayUserMessagePadding,
 	cfgGitEnabled,
 	cfgLoopConditionTimeoutMs,
@@ -466,6 +467,7 @@ const cfgLiveUiSettings = combine({
 	"display.showTokenUsage": cfgDisplayShowTokenUsage,
 	"display.showTurnTime": cfgDisplayShowTurnTime,
 	"display.userMessagePadding": cfgDisplayUserMessagePadding,
+	"display.toolActivitySummary": cfgDisplayToolActivitySummary,
 	"tui.renderMermaid": cfgTuiRenderMermaid,
 	"tui.renderSvg": cfgTuiRenderSvg,
 	"tui.autoGraph": cfgTuiAutoGraph,
@@ -2087,6 +2089,7 @@ export class InteractiveMode implements InteractiveModeContext {
 
 		this.hideToolActivity = cfgDisplayHideToolActivity.get(settings);
 		this.chatContainer.setToolActivityVisible(!this.hideToolActivity);
+		this.chatContainer.setToolRunSummaries(cfgDisplayToolActivitySummary.get(settings));
 		this.hideThinkingBlock = cfgHideThinkingBlock.get(settings);
 		this.proseOnlyThinking = cfgProseOnlyThinking.get(settings);
 		this.expandThinkingBlocks = cfgExpandThinkingBlocks.get(settings);
@@ -3765,6 +3768,11 @@ export class InteractiveMode implements InteractiveModeContext {
 				"display.userMessagePadding",
 			)
 		) {
+			rebuildChat = true;
+		}
+		if (any("display.toolActivitySummary")) {
+			// Run summaries are inserted as tool calls arrive; rebuild to add or drop them.
+			this.chatContainer.setToolRunSummaries(cfgDisplayToolActivitySummary.get(this.settings));
 			rebuildChat = true;
 		}
 		if (any("tui.renderMermaid")) {
