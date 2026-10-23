@@ -1,4 +1,4 @@
-import { applyBackgroundToLine, padding, stripTerminalSequences, visibleWidth } from "../utils";
+import { applyBackgroundToLine, padding, sliceByColumn, stripTerminalSequences, visibleWidth } from "../utils";
 import type { AnimationFrame, TranscriptPresentationTarget } from "../chrome/transcript-container";
 import { type Component, Container } from "../tui";
 import { Disclosure } from "../components/disclosure";
@@ -25,6 +25,7 @@ import type { ReactionTarget } from "./reaction";
 import { card, md, node, row, span, text } from "../native/describe";
 import { base64ImageNode, openableImageProps } from "../native/blobs";
 import { hasTranscriptActions, runTranscriptAction } from "./transcript-actions";
+import { chatTranscriptDisplayPreferences } from "./display-preferences";
 import {
 	type DescribeContext,
 	type NativeChild,
@@ -143,6 +144,8 @@ export class UserMessageComponent extends Container implements ReactionTarget, T
 	readonly #text: string;
 	/** Matches the composer tokens in {@link #text} (chips, skills, this message's mentions). */
 	readonly #tokens: RegExp;
+	/** Blank rows above and below the text; read once, the transcript rebuilds on change. */
+	readonly #padded: boolean;
 	#reaction: string | undefined;
 	#native: NativeNode | undefined;
 	/** The terminal's clock and the image link policy {@link #native} was described with. */
@@ -172,7 +175,8 @@ export class UserMessageComponent extends Container implements ReactionTarget, T
 		this.#imageLinks = options.imageLinks;
 		this.#text = text;
 		this.#tokens = composerTokenRegex(mentionLabels);
-		const markdown = new Markdown(text, 1, 1, getMarkdownTheme(), {
+		this.#padded = chatTranscriptDisplayPreferences.userMessagePadding;
+		const markdown = new Markdown(text, 1, this.#padded ? 1 : 0, getMarkdownTheme(), {
 			bgColor,
 			color: userBubbleColor(options, this.#tokens),
 		});
@@ -294,14 +298,27 @@ export class UserMessageComponent extends Container implements ReactionTarget, T
 	}
 
 	/**
-	 * The top padding row: the live-steering marker left-aligned and the reaction
-	 * badge right-aligned, both inside the horizontal padding.
+	 * The badge row: the live-steering marker left-aligned and the reaction
+	 * badge right-aligned, both inside the horizontal padding. It replaces the
+	 * top padding row, or sits above the text of an unpadded bubble.
 	 */
 	#badgeRow(width: number): string {
 		const marker = this.#liveSteered ? theme.fg("accent", "*") : "";
 		const emoji = this.#reaction ?? "";
 		const gap = Math.max(0, width - 2 - visibleWidth(marker) - visibleWidth(emoji));
 		return applyBackgroundToLine(` ${marker}${padding(gap)}${emoji}`, width, this.#bgColor);
+	}
+
+	/**
+	 * An unpadded bubble's first row with the reaction at its right end, or
+	 * `undefined` when the row's text leaves no blank column before the badge.
+	 */
+	#inlineReaction(line: string, width: number, emoji: string): string | undefined {
+		const emojiStart = width - 1 - visibleWidth(emoji);
+		const textEnd = visibleWidth(stripTerminalSequences(line).trimEnd());
+		if (textEnd + 1 > emojiStart) return undefined;
+		const head = sliceByColumn(line, 0, emojiStart, true);
+		return applyBackgroundToLine(`${head}${padding(emojiStart - visibleWidth(head))}${emoji}`, width, this.#bgColor);
 	}
 
 	/** Apply the transcript allocator's current viewport reservation. */
@@ -325,15 +342,15 @@ export class UserMessageComponent extends Container implements ReactionTarget, T
 
 	#selectEmergencyRow(lines: readonly string[]): string | undefined {
 		if (lines.length === 0) return undefined;
-		if (lines.length >= 3) {
-			for (let i = 1; i < lines.length - 1; i++) {
-				if (stripTerminalSequences(lines[i]!).trim().length > 0) {
-					return lines[i];
-				}
+		const padded = this.#padded && lines.length >= 3;
+		const start = padded ? 1 : 0;
+		const end = padded ? lines.length - 1 : lines.length;
+		for (let i = start; i < end; i++) {
+			if (stripTerminalSequences(lines[i]!).trim().length > 0) {
+				return lines[i];
 			}
-			return lines[1];
 		}
-		return lines[0];
+		return lines[start];
 	}
 
 	override render(width: number): readonly string[] {
@@ -349,7 +366,18 @@ export class UserMessageComponent extends Container implements ReactionTarget, T
 			return this.#zoneLines;
 		}
 		const wrapped = lines.slice();
-		if (this.#reaction !== undefined || this.#liveSteered) wrapped[0] = this.#badgeRow(width);
+		if (this.#reaction !== undefined || this.#liveSteered) {
+			if (this.#padded) {
+				wrapped[0] = this.#badgeRow(width);
+			} else {
+				const inline =
+					this.#reaction !== undefined && !this.#liveSteered
+						? this.#inlineReaction(wrapped[0]!, width, this.#reaction)
+						: undefined;
+				if (inline !== undefined) wrapped[0] = inline;
+				else wrapped.unshift(this.#badgeRow(width));
+			}
+		}
 		wrapped[0] = OSC133_ZONE_START + wrapped[0];
 		wrapped[wrapped.length - 1] = wrapped[wrapped.length - 1] + OSC133_ZONE_CLOSE;
 		this.#zoneSource = lines;

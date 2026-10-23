@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added `display.userMessagePadding` (default `true`): set it to `false` to drop the blank rows above and below your messages in the transcript; a reaction then sits at the right end of the message's first row when it fits, otherwise on its own row above the text
+
 ## [18.12.6] - 2026-10-21
 
 ### Added

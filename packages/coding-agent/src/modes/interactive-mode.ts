@@ -365,6 +365,7 @@ import {
 	cfgDisplayShowTokenUsage,
 	cfgDisplayShowTurnTime,
 	cfgDisplaySubagentLivePreview,
+	cfgDisplayUserMessagePadding,
 	cfgGitEnabled,
 	cfgLoopConditionTimeoutMs,
 	cfgLoopMode,
@@ -464,6 +465,7 @@ const cfgLiveUiSettings = combine({
 	"display.collapseCompacted": cfgDisplayCollapseCompacted,
 	"display.showTokenUsage": cfgDisplayShowTokenUsage,
 	"display.showTurnTime": cfgDisplayShowTurnTime,
+	"display.userMessagePadding": cfgDisplayUserMessagePadding,
 	"tui.renderMermaid": cfgTuiRenderMermaid,
 	"tui.renderSvg": cfgTuiRenderSvg,
 	"tui.autoGraph": cfgTuiAutoGraph,
@@ -3752,10 +3754,16 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 
 		// Usage-row detection, compacted-history collapse, and markdown render
-		// options are baked in at build time: rebuild, then retire rows already
-		// committed to native scrollback.
+		// options and user bubble padding are baked in at build time: rebuild,
+		// then retire rows already committed to native scrollback.
 		if (
-			any("display.cacheMissMarker", "display.collapseCompacted", "display.showTokenUsage", "display.showTurnTime")
+			any(
+				"display.cacheMissMarker",
+				"display.collapseCompacted",
+				"display.showTokenUsage",
+				"display.showTurnTime",
+				"display.userMessagePadding",
+			)
 		) {
 			rebuildChat = true;
 		}

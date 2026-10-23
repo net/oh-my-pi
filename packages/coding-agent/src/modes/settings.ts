@@ -670,6 +670,18 @@ export const cfgDisplayHideToolActivity = register({
 	},
 });
 
+export const cfgDisplayUserMessagePadding = register({
+	id: "display.userMessagePadding",
+	type: "boolean",
+	default: true,
+	ui: {
+		tab: "appearance",
+		group: "Display",
+		label: "User Message Padding",
+		description: "Show a blank row above and below your messages in the transcript",
+	},
+});
+
 export const cfgDisplayShowTokenUsage = register({
 	id: "display.showTokenUsage",
 	type: "boolean",
@@ -709,6 +721,7 @@ effect(
 	combine({
 		hideToolActivity: cfgDisplayHideToolActivity,
 		readToolResultPreview: cfgReadToolResultPreview,
+		userMessagePadding: cfgDisplayUserMessagePadding,
 		showImages: cfgTerminalShowImages,
 		cacheMissMarker: cfgDisplayCacheMissMarker,
 		showTokenUsage: cfgDisplayShowTokenUsage,

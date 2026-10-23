@@ -2,6 +2,8 @@
 export interface ChatTranscriptDisplayPreferences {
 	hideToolActivity: boolean;
 	readToolResultPreview: boolean;
+	/** Blank rows above and below user message bubbles. */
+	userMessagePadding: boolean;
 	showImages: boolean;
 	cacheMissMarker: boolean;
 	showTokenUsage: boolean;
@@ -12,6 +14,7 @@ export interface ChatTranscriptDisplayPreferences {
 export const chatTranscriptDisplayPreferences: ChatTranscriptDisplayPreferences = {
 	hideToolActivity: false,
 	readToolResultPreview: false,
+	userMessagePadding: true,
 	showImages: true,
 	cacheMissMarker: false,
 	showTokenUsage: false,

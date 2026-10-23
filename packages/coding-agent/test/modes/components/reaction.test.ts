@@ -2,6 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test
 import type { AssistantMessage } from "@oh-my-pi/pi-ai";
 import { resetSettingsForTest, Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
 import { AssistantMessageComponent } from "@oh-my-pi/pi-tui/chat/assistant-message";
+import { setChatTranscriptDisplayPreferences } from "@oh-my-pi/pi-tui/chat/display-preferences";
 import { splitReaction } from "@oh-my-pi/pi-tui/chat/reaction";
 import { UserMessageComponent } from "@oh-my-pi/pi-tui/chat/user-message";
 import { initTheme } from "@oh-my-pi/pi-tui/theme";
@@ -162,5 +163,49 @@ describe("agent reactions in the transcript", () => {
 		continuation.pickReactionTarget(transcript.children);
 		expect(bubbleTopRow(user)).not.toContain("🎉");
 		expect(plain(continuation)).toBe("🎉 All green.");
+	});
+});
+
+describe("unpadded user bubbles", () => {
+	const rows = (user: UserMessageComponent) => user.render(W).map(row => Bun.stripANSI(row));
+
+	beforeEach(() => {
+		setChatTranscriptDisplayPreferences({ userMessagePadding: false });
+	});
+
+	afterEach(() => {
+		setChatTranscriptDisplayPreferences({ userMessagePadding: true });
+	});
+
+	it("drops the blank rows above and below the text", () => {
+		expect(rows(new UserMessageComponent("ship it?"))).toEqual([` ship it?${" ".repeat(W - 9)}`]);
+	});
+
+	it("puts the reaction at the right end of the first row when the text leaves room", () => {
+		const user = new UserMessageComponent("ship it?\nnow");
+		user.setReaction("🚀");
+		const [first, second, ...rest] = rows(user);
+		expect(rest).toEqual([]);
+		expect(first).toStartWith(" ship it?");
+		expect(first).toEndWith("🚀 ");
+		expect(Bun.stringWidth(first!)).toBe(W);
+		expect(second!.trim()).toBe("now");
+	});
+
+	it("gives the reaction its own row when the first row's text reaches the badge", () => {
+		const long = "x".repeat(W - 3);
+		const user = new UserMessageComponent(long);
+		user.setReaction("🚀");
+		const [badge, text, ...rest] = rows(user);
+		expect(rest).toEqual([]);
+		expect(badge!.trim()).toBe("🚀");
+		expect(Bun.stringWidth(badge!)).toBe(W);
+		expect(text!.trim()).toBe(long);
+	});
+
+	it("keeps the live-steering marker on its own row above the text", () => {
+		const [marker, text] = rows(new UserMessageComponent("use tabs", { liveSteered: true }));
+		expect(marker).toStartWith(" *");
+		expect(text!.trim()).toBe("use tabs");
 	});
 });
