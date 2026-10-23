@@ -3,7 +3,7 @@ import type { AssistantMessage } from "@oh-my-pi/pi-ai";
 import { AssistantMessageComponent } from "@oh-my-pi/pi-tui/chat/assistant-message";
 import { TranscriptContainer } from "@oh-my-pi/pi-tui/chrome/transcript-container";
 import { type ToolRunCall, ToolRunSummaryComponent } from "@oh-my-pi/pi-tui/chrome/tool-run-summary";
-import { initTheme } from "@oh-my-pi/pi-tui/theme";
+import { initTheme, theme } from "@oh-my-pi/pi-tui/theme";
 import { type Component, Text } from "@oh-my-pi/pi-tui";
 
 const W = 100;
@@ -149,6 +149,15 @@ describe("tool run summaries", () => {
 		expect(lines(container)).toEqual(["tool read"]);
 		container.setToolActivityVisible(false);
 		expect(lines(container)).toEqual(["● Read 1 file"]);
+	});
+
+	it("colors only the failure count, not the separator before it", () => {
+		const container = transcript(true);
+		container.addChild(new FakeTool(done("read", { path: "a.ts" }), { ...done("bash"), state: "failed" }));
+		const [summary] = summaries(container);
+		const line = summary!.render(W)[0]!;
+
+		expect(line).toContain(`${theme.fg("muted", ", ")}${theme.fg("error", "1 failed")}`);
 	});
 
 	it("adds no summaries when turned off", () => {

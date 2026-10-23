@@ -242,7 +242,11 @@ function summarySegments(summary: RunSummary, width: number): Segment[] {
 	const build = (parts: readonly string[], keepTail: boolean): Segment[] => {
 		const lead: Segment[] = [];
 		if (parts.length > 0) lead.push({ text: parts.join(", "), color: "muted" });
-		if (failed) lead.push({ text: lead.length > 0 ? `, ${failed}` : failed, color: "error" });
+		if (failed) {
+			// Only the count is red; the separator keeps the summary's color.
+			if (lead.length > 0) lead.push({ text: ", ", color: "muted" });
+			lead.push({ text: failed, color: "error" });
+		}
 		if (keepTail && tail) lead.push({ text: lead.length > 0 ? ` · ${tail}` : tail, color: "dim" });
 		const first = lead[0];
 		if (first) first.text = capitalize(first.text);
